@@ -77,9 +77,10 @@ cpdef int[:,:] order_xover(int[:,:] par, int m):
 
 	cdef int pivot_1, pivot_2, choice, ii, jj_1, jj_2, p_i=0
 	cdef int[:] ch_1 = np.empty(s,dtype=np.intc), ch_2 = np.empty(s,dtype=np.intc)
+	cdef int[:] empty = np.ones(s,dtype=np.intc)*-1
 	cdef int[:,:] pop = np.empty((m,s), dtype=np.intc)
 	for i,j in pairs:
-		ch_1,ch_2 = np.ones(s,dtype=np.intc)*-1, np.ones(s,dtype=np.intc)*-1
+		ch_1[:],ch_2[:] = empty, empty
 		pivot_1,pivot_2 = floyd_sampler(s,2)
 		if pivot_1 > pivot_2:
 			pivot_1,pivot_2 = pivot_2,pivot_1
@@ -147,7 +148,7 @@ cpdef np.ndarray bit_flip(np.ndarray pop, float prop=.1):
 @cython.wraparound(False)
 @cython.nonecheck(False)
 @cython.cdivision(True)
-cpdef np.ndarray swap(np.ndarray pop, float prop=.1):#confeir!!!!
+cpdef int[:,:] swap(int[:,:] pop, float prop=.1):#confeir!!!!
 	'''
 		entry:
 			pop == population
@@ -162,20 +163,20 @@ cpdef np.ndarray swap(np.ndarray pop, float prop=.1):#confeir!!!!
 	'''
 	cdef int n = pop.shape[0]
 	cdef int s = pop.shape[1]
-	cdef np.ndarray idxs = floyd_sampler(n,int(np.ceil(n*prop)))
+	cdef int[:] idxs = floyd_sampler(n,int(np.ceil(n*prop)))
 
 	cdef int i, x, y
 	for i in idxs:
 		x,y = floyd_sampler(2, s)
 		pop[i][x], pop[i][y] = pop[i][y], pop[i][x]
 
-	return np.array(pop)
+	return pop
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
 @cython.cdivision(True)
-cpdef np.ndarray rank_sel(np.ndarray pop, int k):
+cpdef int[:,:] rank_sel(int[:,:] pop, int k, int q_type=0):##trocar rank por torneio
 	'''
 		entries:
 			pop == populacao
@@ -183,10 +184,18 @@ cpdef np.ndarray rank_sel(np.ndarray pop, int k):
 		exit:
 			par == parents
 	'''
-	cdef np.ndarray i
-	fitness = [eval_table(conv_tab(i)) for i in pop]
+	cdef int[:] i
+	if q_type == 1:
+		fitness = [eval_diags(decode_tab(i)) for i in pop]
+	else:
+		fitness = [eval_table(conv_tab(i)) for i in pop]
+
 	sort_idx = np.argsort(fitness).tolist()			#order by fitness
-	cdef np.ndarray par = pop[sort_idx[:k]]			#select parents
+	cdef int[:,:] par = np.empty((k,s), dtype=np.intc)
+	cdef int ii,j
+	for ii,j in enumerate(sort_idx[:k]):	#select parents
+		par[ii][:] = pop[j]
+
 	return par
 
 @cython.boundscheck(False)

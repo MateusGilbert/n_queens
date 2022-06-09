@@ -46,6 +46,35 @@ cpdef np.ndarray init_table(int N):
 		table[row,col] = 1
 	return table
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
+cpdef int eval_diags(int[:,:] table):
+	#search diagonals
+	cdef int N_table = table.shape[0]
+	cdef int i,j,aux,aux_2,res=0
+	for i in range(N_table-1):
+		aux,aux_2 = 0,0
+		for j in range(N_table-i):
+			aux += table[j,j+i]
+			aux_2 += table[N_table-1-j,i+j]
+		if (aux > 1):
+			res += aux - 1
+		if (aux_2 > 1):
+			res += aux_2 - 1
+	for i in range(1,N_table-1):
+		aux,aux_2 = 0,0
+		for j in range(i+1):
+			aux += table[i-j,j]
+			aux_2 += table[N_table-1-i+j,j]
+		if (aux > 1):
+			res += aux - 1
+		if (aux_2 > 1):
+			res += aux_2 - 1
+	return res
+
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.nonecheck(False)
@@ -177,12 +206,12 @@ cpdef np.ndarray mov_comp(np.ndarray table):
 @cython.nonecheck(False)
 @cython.cdivision(True)
 cpdef int[:] swp_diags(int[:] og_ar, int n_sbar):
-	cdef int i, size=og_ar.shape[0], q = eval_table(decode_tab(og_ar)), q_aux
+	cdef int i, size=og_ar.shape[0], q = eval_diags(decode_tab(og_ar)), q_aux
 	cdef int[:] aux = og_ar.copy(), res_ar = og_ar.copy()
 	
 	for i in range(0,size,n_sbar):
 		aux[i:i+n_sbar],aux[i+n_sbar:i+2*n_sbar] = aux[i+n_sbar:i+2*n_sbar],aux[i:i+n_sbar]
-		q_aux = eval_table(decode_tab(aux))
+		q_aux = eval_diags(decode_tab(aux))
 		if q > q_aux:
 			res_ar[:] = aux.copy()
 			q = q_aux
