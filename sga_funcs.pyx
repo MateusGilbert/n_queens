@@ -167,7 +167,7 @@ cpdef int[:,:] swap(int[:,:] pop, float prop=.1):#confeir!!!!
 
 	cdef int i, x, y
 	for i in idxs:
-		x,y = floyd_sampler(2, s)
+		x,y = floyd_sampler(s, 2)
 		pop[i][x], pop[i][y] = pop[i][y], pop[i][x]
 
 	return pop
