@@ -1,9 +1,17 @@
+# distutils: language=c++
+
 import numpy as np
 cimport numpy as np
+from libcpp.vector cimport vector
+cimport cython
 
 np.import_array()
 
-cpdef np.ndarray floyd_sampler(int N, int M):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
+cpdef int[:] floyd_sampler(int N, int M):
 	'''
 		Robert Floyd's sampler
 		--Reference--
@@ -12,18 +20,23 @@ cpdef np.ndarray floyd_sampler(int N, int M):
 			Jornal: Communications of the ACM
 			Year: 1987
 	'''
-	cdef np.ndarray samples = np.zeros(M, dtype=np.int16)
+	#cdef np.ndarray samples = np.zeros(M, dtype=np.intc)
+	cdef int[:] samples = np.zeros(M, dtype=np.intc)
 	cdef int i, sample
 	if N-M == 0:
-		return np.random.permutation(N)
+		return np.random.permutation(N, dtype=np.intc)
 	for i in range(N-M,N):
-		sample = np.random.randint(i)
+		sample = np.random.randint(i, dtype=np.intc)
 		samples[i - N + M] = i if sample in samples else sample
 	return samples
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
 cpdef np.ndarray init_table(int N):
 	cdef int N_table = N
-	cdef np.ndarray table = np.zeros([N_table,N_table], dtype=np.int16)
+	cdef np.ndarray table = np.zeros([N_table,N_table], dtype=np.intc)
 	cdef int i,j
 	cdef np.ndarray pos = floyd_sampler(N_table*N_table, N)
 	cdef int col, row
@@ -33,13 +46,14 @@ cpdef np.ndarray init_table(int N):
 		table[row,col] = 1
 	return table
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
 cpdef int eval_table(np.ndarray table):
 	cdef int conv=0
-#	if table.ndim < 2:
-#		table = conv_tab(table)
-#		conv = 1
 	cdef int N_table = table.shape[0];
-	cdef np.ndarray v1 = np.ones(N_table, dtype=np.int16)
+	cdef np.ndarray v1 = np.ones(N_table, dtype=np.intc)
 	cdef int res = 0, aux
 	cdef np.ndarray vec
 
@@ -80,17 +94,45 @@ cpdef int eval_table(np.ndarray table):
 	res += 10*abs(N_table - count)  #constant 10 strongly penalizes solutions with less then
 											#the required number of queens
 
-#	if conv == 1:
-#		table = conv_tab(table)
-
 	return res
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
 cpdef np.ndarray conv_tab(np.ndarray table):
 	if table.ndim > 1:
 		return table.reshape(-1,1).squeeze()
 	cdef int N_table = int(np.sqrt(table.shape[0]))
 	return table.reshape(N_table,N_table)
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
+cpdef int[:,:] decode_tab(int[:] code):										#code = each position indicates a row, store value is the column
+	cdef int N_table = code.shape[0], i,j
+	cdef int[:,:] table = np.zeros((N_table,N_table), dtype=np.intc)
+	for i,j in enumerate(code):
+		table[i,j] = 1
+	return table
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
+cpdef int[:] encode_tab(int[:,:] table):
+	cdef int N_table = table.shape[0], i,j
+	cdef int[:] code = np.zeros(N_table, dtype=np.intc)
+	cdef int[:] v = np.arange(N_table, dtype=np.intc)
+	for i,row in enumerate(table):
+		code[i] = np.matmul(v,row)
+	return code
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
 cpdef np.ndarray mov_comp(np.ndarray table):
 	cdef int N_table = table.shape[0]
 	cdef np.ndarray x,y,aux_table = table.copy(), res_table = table.copy()
@@ -106,7 +148,7 @@ cpdef np.ndarray mov_comp(np.ndarray table):
 			[-1,0],		#up
 			[-1,1]		#up-right
 		],
-		dtype=np.int16
+		dtype=np.intc
 	)
 
 	cdef int i,j,r,c,aux_fit,n_mov = mov.shape[0]
@@ -129,14 +171,40 @@ cpdef np.ndarray mov_comp(np.ndarray table):
 				aux_table[r,c] = 0
 	return res_table
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
+cpdef int[:] swp_diags(int[:] og_ar, int n_sbar):
+	cdef int i, size=og_ar.shape[0], q = eval_table(decode_tab(og_ar)), q_aux
+	cdef int[:] aux = og_ar.copy(), res_ar = og_ar.copy()
+	
+	for i in range(0,size,n_sbar):
+		aux[i:i+n_sbar],aux[i+n_sbar:i+2*n_sbar] = aux[i+n_sbar:i+2*n_sbar],aux[i:i+n_sbar]
+		q_aux = eval_table(decode_tab(aux))
+		if q > q_aux:
+			res_ar[:] = aux.copy()
+			q = q_aux
+		else:
+			aux[:] = res_ar.copy()
+
+	return res_ar
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.nonecheck(False)
+@cython.cdivision(True)
 cpdef np.ndarray rem_queens(np.ndarray table):
 	cdef int count, N_queens = table.shape[0]
 	count = np.sum(table)
 	if count == N_queens:
 		return table
 
-	cdef np.ndarray q_pos = np.where(table == 1)
-	cdef int i, j, x=q_pos[0], y=q_pos[1]
+	cdef np.ndarray x,y
+	(x,y) = np.where(table == 1)
+	cdef int i, j
+	#cdef vector[int] x=q_pos[0], y=q_pos[1]
 	cdef int old_fit
 	if count > N_queens:
 		for i,j in zip(x,y):
