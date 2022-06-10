@@ -305,7 +305,7 @@ cpdef (int, vector[int], vector[float], vector[ vector[int] ]) sga_2(int N_queen
 
 	cdef int[:] ind, res = np.zeros(pop_size, dtype=np.intc), b_res = np.zeros(N_queens*N_queens, dtype=np.intc)
 	cdef int[:,:] par
-	cdef int b_fit=N_queens*100, k = 5 if pop_size < 1000 else 10
+	cdef int b_fit=N_queens*100, k = 5 if pop_size < 1000 else 10, solved=0
 	cdef float mean_fit
 	while(epoch<n_epochs):
 		par = tor_sel(pop, n_par, k, q_type=1)
