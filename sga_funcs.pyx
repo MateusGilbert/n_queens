@@ -13,7 +13,6 @@ np.import_array()
 @cython.nonecheck(False)
 @cython.cdivision(True)
 cpdef int[:,:] one_point_xover(int[:,:] par, int m):
-#cpdef np.ndarray one_point_xover(np.ndarray par, int m):
 	'''
 		entries:
 			par == parents
@@ -40,16 +39,13 @@ cpdef int[:,:] one_point_xover(int[:,:] par, int m):
 	cdef pivot
 	cdef int[:] ch_1, ch_2
 	cdef int[:,:] pop = np.empty((m,s), dtype=np.intc)
-	#pop = list()
 	for i,j in pairs:
 		pivot = np.random.randint(s-1)
 		ch_1 = np.concatenate([par[i][:pivot], par[j][pivot:]])
 		ch_2 = np.concatenate([par[j][:pivot], par[i][pivot:]])
 		pop[i] = ch_1
 		pop[j] = ch_2
-		#pop.extend([ch_1,ch_2])
 
-	#return np.array(pop)
 	return pop
 
 @cython.boundscheck(False)
@@ -124,7 +120,6 @@ cpdef int[:,:] order_xover(int[:,:] par, int m):
 @cython.wraparound(False)
 @cython.nonecheck(False)
 @cython.cdivision(True)
-#cpdef np.ndarray bit_flip(np.ndarray pop, float prop=.1):
 cpdef int[:,:] bit_flip(int[:,:] pop, float prop=.1):
 	'''
 		entry:
@@ -217,7 +212,6 @@ cpdef int[:,:] tor_sel(int[:,:] pop, int mu, int k, int q_type=0):
 @cython.nonecheck(False)
 @cython.cdivision(True)
 cpdef int[:,:] meme(int[:,:] pop):
-#cpdef np.ndarray meme(np.ndarray pop):
 	cdef int[:] aux
 	cdef int[:,:] o_pop = np.zeros((pop.shape[0],pop.shape[1]), dtype=np.intc)
 	for i,aux in enumerate(pop):
@@ -262,7 +256,8 @@ cpdef (int, vector[int], vector[float], vector[ vector[int] ]) sga(int N_queens,
 		par = tor_sel(pop, n_par, k)
 		pop = one_point_xover(par, pop_size)
 		pop = bit_flip(pop)
-		if u_meme > 0:
+		#if u_meme > 0:
+		if (u_meme == 1) or ((u_meme >= epoch) and (u_meme > 0)):
 			pop = meme(pop)
 
 		#evaluate epoch results
@@ -279,9 +274,9 @@ cpdef (int, vector[int], vector[float], vector[ vector[int] ]) sga(int N_queens,
 				solved=1
 				break
 
-		epoch += 1
 		if solved==1:
 			break
+		epoch += 1
 
 	cdef int[:] cand_res = np.where(np.array(res) == b_fit)[0].astype(np.intc)
 	cdef vector[ vector [int] ] sol# = np.empty((cand_res.shape[0], N_queens*N_queens), dtype=np.intc) #conferir
@@ -297,8 +292,8 @@ cpdef (int, vector[int], vector[float], vector[ vector[int] ]) sga(int N_queens,
 @cython.cdivision(True)
 cpdef (int, vector[int], vector[float], vector[ vector[int] ]) sga_2(int N_queens, int pop_size, int n_par, int n_epochs=10000, int u_meme=0):
 	cdef int epoch=0,i
-	cdef vector[ int ] J_best = np.zeros(n_epochs, dtype=np.intc)
-	cdef vector [float] J_med = np.zeros(n_epochs, dtype=np.single)
+	cdef vector[ int ] J_best = np.ones(n_epochs, dtype=np.intc)*-1
+	cdef vector [float] J_med = np.ones(n_epochs, dtype=np.single)*-1
 	cdef int[:,:] pop = np.array(
 		[np.random.permutation(N_queens).astype(np.intc) for i in range(pop_size)]#, dtype=np.intc
 	)
@@ -311,7 +306,8 @@ cpdef (int, vector[int], vector[float], vector[ vector[int] ]) sga_2(int N_queen
 		par = tor_sel(pop, n_par, k, q_type=1)
 		pop = order_xover(par, pop_size)
 		pop = swap(pop,prop=.2)
-		if u_meme > 0:
+		#if u_meme > 0:
+		if (u_meme == 1) or ((u_meme >= epoch) and (u_meme > 0)):
 			pop = meme_2(pop)
 
 		#evaluate epoch results
@@ -325,11 +321,12 @@ cpdef (int, vector[int], vector[float], vector[ vector[int] ]) sga_2(int N_queen
 
 		for i in res:
 			if i == 0:
+				solved=1
 				break
 
-		epoch += 1
 		if solved==1:
 			break
+		epoch += 1
 
 	cdef int[:] cand_res = np.where(np.array(res) == b_fit)[0].astype(np.intc)
 	cdef vector[ vector [int] ] sol
